@@ -1,19 +1,24 @@
 package core
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gofrs/uuid"
 	"github.com/knadh/listmonk/models"
 	"github.com/labstack/echo/v4"
 	"github.com/lib/pq"
+	"go.uber.org/zap"
 )
 
 // GetLists gets all lists optionally filtered by type.
-func (c *Core) GetLists(typ string) ([]models.List, error) {
+func (c *Core) GetLists(ctx context.Context, typ string) ([]models.List, error) {
 	out := []models.List{}
 
-	if err := c.q.GetLists.Select(&out, typ, "id"); err != nil {
+	logger, _ := zap.NewProduction()
+	defer logger.Sync() // flushes buffer, if any
+	logger.Info("in GetLists service")
+	if err := c.q.GetLists.SelectContext(ctx, &out, typ, "id"); err != nil {
 		c.log.Printf("error fetching lists: %v", err)
 		return nil, echo.NewHTTPError(http.StatusInternalServerError,
 			c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.lists}", "error", pqErrMsg(err)))

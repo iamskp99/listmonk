@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -14,6 +15,9 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
+	"github.com/keploy/go-sdk/integrations/kecho/v4"
+	"github.com/keploy/go-sdk/integrations/ksql"
+	"github.com/keploy/go-sdk/keploy"
 	"github.com/knadh/goyesql/v2"
 	goyesqlx "github.com/knadh/goyesql/v2/sqlx"
 	"github.com/knadh/koanf"
@@ -251,9 +255,12 @@ func initDB() *sqlx.DB {
 	if err := ko.Unmarshal("db", &c); err != nil {
 		lo.Fatalf("error loading db config: %v", err)
 	}
+	driver := ksql.Driver{Driver: pq.Driver{}}
+
+	sql.Register("keploy", &driver)
 
 	lo.Printf("connecting to db: %s:%d/%s", c.Host, c.Port, c.DBName)
-	db, err := sqlx.Connect("postgres",
+	db, err := sqlx.Connect("keploy",
 		fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s", c.Host, c.Port, c.User, c.Password, c.DBName, c.SSLMode))
 	if err != nil {
 		lo.Fatalf("error connecting to DB: %v", err)
@@ -666,6 +673,16 @@ func initBounceManager(app *App) *bounce.Manager {
 func initHTTPServer(app *App) *echo.Echo {
 	// Initialize the HTTP server.
 	var srv = echo.New()
+	k := keploy.New(keploy.Config{
+		App: keploy.AppConfig{
+			Name: "my-app",
+			Port: "9000",
+		},
+		Server: keploy.ServerConfig{
+			URL: "http://localhost:6789/api",
+		},
+	})
+	srv.Use(kecho.EchoMiddlewareV4(k))
 	srv.HideBanner = true
 
 	// Register app (*App) to be injected into all HTTP handlers.
