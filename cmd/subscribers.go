@@ -212,7 +212,7 @@ func handleCreateSubscriber(c echo.Context) error {
 	}
 
 	// Insert the subscriber into the DB.
-	sub, _, err := app.core.InsertSubscriber(req.Subscriber, req.Lists, req.ListUUIDs, req.PreconfirmSubs)
+	sub, _, err := app.core.InsertSubscriber(c.Request().Context(), req.Subscriber, req.Lists, req.ListUUIDs, req.PreconfirmSubs)
 	if err != nil {
 		return err
 	}
@@ -360,11 +360,11 @@ func handleManageSubscriberLists(c echo.Context) error {
 	var err error
 	switch req.Action {
 	case "add":
-		err = app.core.AddSubscriptions(subIDs, req.TargetListIDs, req.Status)
+		err = app.core.AddSubscriptions(c.Request().Context(), subIDs, req.TargetListIDs, req.Status)
 	case "remove":
-		err = app.core.DeleteSubscriptions(subIDs, req.TargetListIDs)
+		err = app.core.DeleteSubscriptions(c.Request().Context(), subIDs, req.TargetListIDs)
 	case "unsubscribe":
-		err = app.core.UnsubscribeLists(subIDs, req.TargetListIDs)
+		err = app.core.UnsubscribeLists(c.Request().Context(), subIDs, req.TargetListIDs)
 	default:
 		return echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("subscribers.invalidAction"))
 	}

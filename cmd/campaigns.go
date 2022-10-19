@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -60,7 +61,7 @@ func handleGetCampaigns(c echo.Context) error {
 		noBody, _ = strconv.ParseBool(c.QueryParam("no_body"))
 	)
 
-	res, total, err := app.core.QueryCampaigns(query, status, orderBy, order, pg.Offset, pg.Limit)
+	res, total, err := app.core.QueryCampaigns(c.Request().Context(), query, status, orderBy, order, pg.Offset, pg.Limit)
 	if err != nil {
 		return err
 	}
@@ -95,7 +96,7 @@ func handleGetCampaign(c echo.Context) error {
 		noBody, _ = strconv.ParseBool(c.QueryParam("no_body"))
 	)
 
-	out, err := app.core.GetCampaign(id, "")
+	out, err := app.core.GetCampaign(c.Request().Context(), id, "")
 	if err != nil {
 		return err
 	}
@@ -119,7 +120,7 @@ func handlePreviewCampaign(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("globals.messages.invalidID"))
 	}
 
-	camp, err := app.core.GetCampaignForPreview(id, tplID)
+	camp, err := app.core.GetCampaignForPreview(c.Request().Context(), id, tplID)
 	if err != nil {
 		return err
 	}
@@ -192,7 +193,7 @@ func handleCreateCampaign(c echo.Context) error {
 
 	// If the campaign's 'opt-in', prepare a default message.
 	if o.Type == models.CampaignTypeOptin {
-		op, err := makeOptinCampaignMessage(o, app)
+		op, err := makeOptinCampaignMessage(c.Request().Context(), o, app)
 		if err != nil {
 			return err
 		}
@@ -215,7 +216,7 @@ func handleCreateCampaign(c echo.Context) error {
 		o = c
 	}
 
-	out, err := app.core.CreateCampaign(o.Campaign, o.ListIDs)
+	out, err := app.core.CreateCampaign(c.Request().Context(), o.Campaign, o.ListIDs)
 	if err != nil {
 		return err
 	}
@@ -236,7 +237,7 @@ func handleUpdateCampaign(c echo.Context) error {
 
 	}
 
-	cm, err := app.core.GetCampaign(id, "")
+	cm, err := app.core.GetCampaign(c.Request().Context(), id, "")
 	if err != nil {
 		return err
 	}
@@ -259,7 +260,7 @@ func handleUpdateCampaign(c echo.Context) error {
 		o = c
 	}
 
-	out, err := app.core.UpdateCampaign(id, o.Campaign, o.ListIDs, o.SendLater)
+	out, err := app.core.UpdateCampaign(c.Request().Context(), id, o.Campaign, o.ListIDs, o.SendLater)
 	if err != nil {
 		return err
 	}
@@ -286,7 +287,7 @@ func handleUpdateCampaignStatus(c echo.Context) error {
 		return err
 	}
 
-	out, err := app.core.UpdateCampaignStatus(id, o.Status)
+	out, err := app.core.UpdateCampaignStatus(c.Request().Context(), id, o.Status)
 	if err != nil {
 		return err
 	}
@@ -306,7 +307,7 @@ func handleDeleteCampaign(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("globals.messages.invalidID"))
 	}
 
-	if err := app.core.DeleteCampaign(id); err != nil {
+	if err := app.core.DeleteCampaign(c.Request().Context(), id); err != nil {
 		return err
 	}
 
@@ -319,7 +320,7 @@ func handleGetRunningCampaignStats(c echo.Context) error {
 		app = c.Get("app").(*App)
 	)
 
-	out, err := app.core.GetRunningCampaignStats()
+	out, err := app.core.GetRunningCampaignStats(c.Request().Context())
 	if err != nil {
 		return err
 	}
@@ -392,7 +393,7 @@ func handleTestCampaign(c echo.Context) error {
 	}
 
 	// The campaign.
-	camp, err := app.core.GetCampaignForPreview(campID, tplID)
+	camp, err := app.core.GetCampaignForPreview(c.Request().Context(), campID, tplID)
 	if err != nil {
 		return err
 	}
@@ -448,7 +449,7 @@ func handleGetCampaignViewAnalytics(c echo.Context) error {
 
 	// Campaign link stats.
 	if typ == "links" {
-		out, err := app.core.GetCampaignAnalyticsLinks(ids, typ, from, to)
+		out, err := app.core.GetCampaignAnalyticsLinks(c.Request().Context(), ids, typ, from, to)
 		if err != nil {
 			return err
 		}
@@ -457,7 +458,7 @@ func handleGetCampaignViewAnalytics(c echo.Context) error {
 	}
 
 	// View, click, bounce stats.
-	out, err := app.core.GetCampaignAnalyticsCounts(ids, typ, from, to)
+	out, err := app.core.GetCampaignAnalyticsCounts(c.Request().Context(), ids, typ, from, to)
 	if err != nil {
 		return err
 	}
@@ -541,13 +542,13 @@ func isCampaignalMutable(status string) bool {
 }
 
 // makeOptinCampaignMessage makes a default opt-in campaign message body.
-func makeOptinCampaignMessage(o campaignReq, app *App) (campaignReq, error) {
+func makeOptinCampaignMessage(ctx context.Context, o campaignReq, app *App) (campaignReq, error) {
 	if len(o.ListIDs) == 0 {
 		return o, echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("campaigns.fieldInvalidListIDs"))
 	}
 
 	// Fetch double opt-in lists from the given list IDs.
-	lists, err := app.core.GetListsByOptin(o.ListIDs, models.ListOptinDouble)
+	lists, err := app.core.GetListsByOptin(ctx, o.ListIDs, models.ListOptinDouble)
 	if err != nil {
 		return o, err
 	}

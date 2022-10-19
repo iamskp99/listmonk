@@ -238,7 +238,7 @@ func (c *Core) ExportSubscribers(query string, subIDs, listIDs []int, batchSize 
 // InsertSubscriber inserts a subscriber and returns the ID. The first bool indicates if
 // it was a new subscriber, and the second bool indicates if the subscriber was sent an optin confirmation.
 // bool = optinSent?
-func (c *Core) InsertSubscriber(sub models.Subscriber, listIDs []int, listUUIDs []string, preconfirm bool) (models.Subscriber, bool, error) {
+func (c *Core) InsertSubscriber(ctx context.Context, sub models.Subscriber, listIDs []int, listUUIDs []string, preconfirm bool) (models.Subscriber, bool, error) {
 	uu, err := uuid.NewV4()
 	if err != nil {
 		c.log.Printf("error generating UUID: %v", err)
@@ -263,7 +263,7 @@ func (c *Core) InsertSubscriber(sub models.Subscriber, listIDs []int, listUUIDs 
 		listUUIDs = []string{}
 	}
 
-	if err = c.q.InsertSubscriber.Get(&sub.ID,
+	if err = c.q.InsertSubscriber.GetContext(ctx, &sub.ID,
 		sub.UUID,
 		sub.Email,
 		strings.TrimSpace(sub.Name),

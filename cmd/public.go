@@ -126,7 +126,7 @@ func handleViewCampaignMessage(c echo.Context) error {
 	)
 
 	// Get the campaign.
-	camp, err := app.core.GetCampaign(0, campUUID)
+	camp, err := app.core.GetCampaign(c.Request().Context(), 0, campUUID)
 	if err != nil {
 		if er, ok := err.(*echo.HTTPError); ok {
 			if er.Code == http.StatusBadRequest {
@@ -357,7 +357,7 @@ func handleLinkRedirect(c echo.Context) error {
 		subUUID = ""
 	}
 
-	url, err := app.core.RegisterCampaignLinkClick(linkUUID, campUUID, subUUID)
+	url, err := app.core.RegisterCampaignLinkClick(c.Request().Context(), linkUUID, campUUID, subUUID)
 	if err != nil {
 		e := err.(*echo.HTTPError)
 		return c.Render(e.Code, tplMessage, makeMsgTpl(app.i18n.T("public.errorTitle"), "", e.Error()))
@@ -384,7 +384,7 @@ func handleRegisterCampaignView(c echo.Context) error {
 
 	// Exclude dummy hits from template previews.
 	if campUUID != dummyUUID && subUUID != dummyUUID {
-		if err := app.core.RegisterCampaignView(campUUID, subUUID); err != nil {
+		if err := app.core.RegisterCampaignView(c.Request().Context(), campUUID, subUUID); err != nil {
 			app.log.Printf("error registering campaign view: %s", err)
 		}
 	}
@@ -534,7 +534,7 @@ func processSubForm(c echo.Context) (bool, error) {
 	listUUIDs := pq.StringArray(req.FormListUUIDs)
 
 	// Insert the subscriber into the DB.
-	_, hasOptin, err := app.core.InsertSubscriber(models.Subscriber{
+	_, hasOptin, err := app.core.InsertSubscriber(c.Request().Context(), models.Subscriber{
 		Name:   req.Name,
 		Email:  req.Email,
 		Status: models.SubscriberStatusEnabled,

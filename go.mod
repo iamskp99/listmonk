@@ -2,7 +2,7 @@ module github.com/knadh/listmonk
 
 go 1.13
 
-replace github.com/keploy/go-sdk => ../go-workspace/github.com/keploy/go-sdk
+replace github.com/keploy/go-sdk => ../../go-sdk
 
 require (
 	github.com/Masterminds/sprig/v3 v3.2.2
