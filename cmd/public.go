@@ -141,7 +141,7 @@ func handleViewCampaignMessage(c echo.Context) error {
 	}
 
 	// Get the subscriber.
-	sub, err := app.core.GetSubscriber(0, subUUID, "")
+	sub, err := app.core.GetSubscriber(c.Request().Context(), 0, subUUID, "")
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return c.Render(http.StatusNotFound, tplMessage,
@@ -195,7 +195,7 @@ func handleSubscriptionPage(c echo.Context) error {
 			blocklist = false
 		}
 
-		if err := app.core.UnsubscribeByCampaign(subUUID, campUUID, blocklist); err != nil {
+		if err := app.core.UnsubscribeByCampaign(c.Request().Context(), subUUID, campUUID, blocklist); err != nil {
 			return c.Render(http.StatusInternalServerError, tplMessage,
 				makeMsgTpl(app.i18n.T("public.errorTitle"), "", app.i18n.Ts("public.errorProcessingRequest")))
 		}
@@ -237,7 +237,7 @@ func handleOptinPage(c echo.Context) error {
 	}
 
 	// Get the list of subscription lists where the subscriber hasn't confirmed.
-	lists, err := app.core.GetSubscriberLists(0, subUUID, nil, out.ListUUIDs, models.SubscriptionStatusUnconfirmed, "")
+	lists, err := app.core.GetSubscriberLists(c.Request().Context(), 0, subUUID, nil, out.ListUUIDs, models.SubscriptionStatusUnconfirmed, "")
 	if err != nil {
 		return c.Render(http.StatusInternalServerError, tplMessage,
 			makeMsgTpl(app.i18n.T("public.errorTitle"), "", app.i18n.Ts("public.errorFetchingLists")))
@@ -252,7 +252,7 @@ func handleOptinPage(c echo.Context) error {
 
 	// Confirm.
 	if confirm {
-		if err := app.core.ConfirmOptionSubscription(subUUID, out.ListUUIDs); err != nil {
+		if err := app.core.ConfirmOptionSubscription(c.Request().Context(), subUUID, out.ListUUIDs); err != nil {
 			app.log.Printf("error unsubscribing: %v", err)
 			return c.Render(http.StatusInternalServerError, tplMessage,
 				makeMsgTpl(app.i18n.T("public.errorTitle"), "", app.i18n.Ts("public.errorProcessingRequest")))
@@ -411,7 +411,7 @@ func handleSelfExportSubscriberData(c echo.Context) error {
 	// Get the subscriber's data. A single query that gets the profile,
 	// list subscriptions, campaign views, and link clicks. Names of
 	// private lists are replaced with "Private list".
-	data, b, err := exportSubscriberData(0, subUUID, app.constants.Privacy.Exportable, app)
+	data, b, err := exportSubscriberData(c.Request().Context(), 0, subUUID, app.constants.Privacy.Exportable, app)
 	if err != nil {
 		app.log.Printf("error exporting subscriber data: %s", err)
 		return c.Render(http.StatusInternalServerError, tplMessage,
@@ -466,7 +466,7 @@ func handleWipeSubscriberData(c echo.Context) error {
 			makeMsgTpl(app.i18n.T("public.errorTitle"), "", app.i18n.Ts("public.invalidFeature")))
 	}
 
-	if err := app.core.DeleteSubscribers(nil, []string{subUUID}); err != nil {
+	if err := app.core.DeleteSubscribers(c.Request().Context(), nil, []string{subUUID}); err != nil {
 		app.log.Printf("error wiping subscriber data: %s", err)
 		return c.Render(http.StatusInternalServerError, tplMessage,
 			makeMsgTpl(app.i18n.T("public.errorTitle"), "", app.i18n.Ts("public.errorProcessingRequest")))
@@ -542,12 +542,12 @@ func processSubForm(c echo.Context) (bool, error) {
 	if err != nil {
 		// Subscriber already exists. Update subscriptions.
 		if e, ok := err.(*echo.HTTPError); ok && e.Code == http.StatusConflict {
-			sub, err := app.core.GetSubscriber(0, "", req.Email)
+			sub, err := app.core.GetSubscriber(c.Request().Context(), 0, "", req.Email)
 			if err != nil {
 				return false, err
 			}
 
-			if _, err := app.core.UpdateSubscriber(sub.ID, sub, nil, listUUIDs, false); err != nil {
+			if _, err := app.core.UpdateSubscriber(c.Request().Context(), sub.ID, sub, nil, listUUIDs, false); err != nil {
 				return false, err
 			}
 

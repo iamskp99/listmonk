@@ -387,7 +387,7 @@ func handleTestCampaign(c echo.Context) error {
 		req.SubscriberEmails[i] = strings.ToLower(strings.TrimSpace(req.SubscriberEmails[i]))
 	}
 
-	subs, err := app.core.GetSubscribersByEmail(req.SubscriberEmails)
+	subs, err := app.core.GetSubscribersByEmail(c.Request().Context(), req.SubscriberEmails)
 	if err != nil {
 		return err
 	}

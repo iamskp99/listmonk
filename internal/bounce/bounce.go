@@ -1,6 +1,7 @@
 package bounce
 
 import (
+	"context"
 	"errors"
 	"log"
 	"time"
@@ -34,7 +35,7 @@ type Opt struct {
 	SendgridEnabled bool        `json:"sendgrid_enabled"`
 	SendgridKey     string      `json:"sendgrid_key"`
 
-	RecordBounceCB func(models.Bounce) error
+	RecordBounceCB func(context.Context, models.Bounce) error
 }
 
 // Manager handles e-mail bounces.
@@ -108,7 +109,7 @@ func (m *Manager) Run() {
 				b.CreatedAt = time.Now()
 			}
 
-			if err := m.opt.RecordBounceCB(b); err != nil {
+			if err := m.opt.RecordBounceCB(context.Background(), b); err != nil {
 				continue
 			}
 		}

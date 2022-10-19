@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -72,7 +73,7 @@ func handleGetSubscriber(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("globals.messages.invalidID"))
 	}
 
-	out, err := app.core.GetSubscriber(id, "", "")
+	out, err := app.core.GetSubscriber(c.Request().Context(), id, "", "")
 	if err != nil {
 		return err
 	}
@@ -99,7 +100,7 @@ func handleQuerySubscribers(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("globals.messages.invalidID"))
 	}
 
-	res, total, err := app.core.QuerySubscribers(query, listIDs, order, orderBy, pg.Offset, pg.Limit)
+	res, total, err := app.core.QuerySubscribers(c.Request().Context(), query, listIDs, order, orderBy, pg.Offset, pg.Limit)
 	if err != nil {
 		return err
 	}
@@ -135,7 +136,7 @@ func handleExportSubscribers(c echo.Context) error {
 	}
 
 	// Get the batched export iterator.
-	exp, err := app.core.ExportSubscribers(query, subIDs, listIDs, app.constants.DBBatchSize)
+	exp, err := app.core.ExportSubscribers(c.Request().Context(), query, subIDs, listIDs, app.constants.DBBatchSize)
 	if err != nil {
 		return err
 	}
@@ -251,7 +252,7 @@ func handleUpdateSubscriber(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("subscribers.invalidName"))
 	}
 
-	out, err := app.core.UpdateSubscriber(id, req.Subscriber, req.Lists, nil, req.PreconfirmSubs)
+	out, err := app.core.UpdateSubscriber(c.Request().Context(), id, req.Subscriber, req.Lists, nil, req.PreconfirmSubs)
 	if err != nil {
 		return err
 	}
@@ -271,7 +272,7 @@ func handleSubscriberSendOptin(c echo.Context) error {
 	}
 
 	// Fetch the subscriber.
-	out, err := app.core.GetSubscriber(id, "", "")
+	out, err := app.core.GetSubscriber(c.Request().Context(), id, "", "")
 	if err != nil {
 		return err
 	}
@@ -315,7 +316,7 @@ func handleBlocklistSubscribers(c echo.Context) error {
 		subIDs = req.SubscriberIDs
 	}
 
-	if err := app.core.BlocklistSubscribers(subIDs); err != nil {
+	if err := app.core.BlocklistSubscribers(c.Request().Context(), subIDs); err != nil {
 		return err
 	}
 
@@ -406,7 +407,7 @@ func handleDeleteSubscribers(c echo.Context) error {
 		subIDs = i
 	}
 
-	if err := app.core.DeleteSubscribers(subIDs, nil); err != nil {
+	if err := app.core.DeleteSubscribers(c.Request().Context(), subIDs, nil); err != nil {
 		return err
 	}
 
@@ -499,7 +500,7 @@ func handleDeleteSubscriberBounces(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("globals.messages.invalidID"))
 	}
 
-	if err := app.core.DeleteSubscriberBounces(id, ""); err != nil {
+	if err := app.core.DeleteSubscriberBounces(c.Request().Context(), id, ""); err != nil {
 		return err
 	}
 
@@ -524,7 +525,7 @@ func handleExportSubscriberData(c echo.Context) error {
 	// Get the subscriber's data. A single query that gets the profile,
 	// list subscriptions, campaign views, and link clicks. Names of
 	// private lists are replaced with "Private list".
-	_, b, err := exportSubscriberData(id, "", app.constants.Privacy.Exportable, app)
+	_, b, err := exportSubscriberData(c.Request().Context(), id, "", app.constants.Privacy.Exportable, app)
 	if err != nil {
 		app.log.Printf("error exporting subscriber data: %s", err)
 		return echo.NewHTTPError(http.StatusInternalServerError,
@@ -541,8 +542,8 @@ func handleExportSubscriberData(c echo.Context) error {
 // subscriptions, campaign_views, link_clicks (if they're enabled in the config)
 // and returns a formatted, indented JSON payload. Either takes a numeric id
 // and an empty subUUID or takes 0 and a string subUUID.
-func exportSubscriberData(id int, subUUID string, exportables map[string]bool, app *App) (models.SubscriberExportProfile, []byte, error) {
-	data, err := app.core.GetSubscriberProfileForExport(id, subUUID)
+func exportSubscriberData(ctx context.Context, id int, subUUID string, exportables map[string]bool, app *App) (models.SubscriberExportProfile, []byte, error) {
+	data, err := app.core.GetSubscriberProfileForExport(ctx, id, subUUID)
 	if err != nil {
 		return data, nil, err
 	}
@@ -610,7 +611,7 @@ func getQueryInts(param string, qp url.Values) ([]int, error) {
 // created via `core.CreateSubscriber()`.
 func sendOptinConfirmationHook(app *App) func(sub models.Subscriber, listIDs []int) (int, error) {
 	return func(sub models.Subscriber, listIDs []int) (int, error) {
-		lists, err := app.core.GetSubscriberLists(sub.ID, "", listIDs, nil, models.SubscriptionStatusUnconfirmed, models.ListOptinDouble)
+		lists, err := app.core.GetSubscriberLists(context.Background(),sub.ID, "", listIDs, nil, models.SubscriptionStatusUnconfirmed, models.ListOptinDouble)
 		if err != nil {
 			return 0, err
 		}

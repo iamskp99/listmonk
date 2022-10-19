@@ -109,7 +109,7 @@ type Queries struct {
 // out of it using the raw `query-subscribers-template` query template.
 // While doing this, a readonly transaction is created and the query is
 // dry run on it to ensure that it is indeed readonly.
-func (q *Queries) CompileSubscriberQueryTpl(exp string, db *sqlx.DB) (string, error) {
+func (q *Queries) CompileSubscriberQueryTpl(cts context.Context, exp string, db *sqlx.DB) (string, error) {
 	tx, err := db.BeginTxx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return "", err
@@ -133,7 +133,7 @@ func (q *Queries) CompileSubscriberQueryTpl(exp string, db *sqlx.DB) (string, er
 // combines and executes them.
 func (q *Queries) ExecSubQueryTpl(exp, tpl string, listIDs []int, db *sqlx.DB, args ...interface{}) error {
 	// Perform a dry run.
-	filterExp, err := q.CompileSubscriberQueryTpl(exp, db)
+	filterExp, err := q.CompileSubscriberQueryTpl(context.Background(), exp, db)
 	if err != nil {
 		return err
 	}

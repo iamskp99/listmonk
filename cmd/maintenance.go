@@ -21,9 +21,9 @@ func handleGCSubscribers(c echo.Context) error {
 
 	switch typ {
 	case "blocklisted":
-		n, err = app.core.DeleteBlocklistedSubscribers()
+		n, err = app.core.DeleteBlocklistedSubscribers(c.Request().Context())
 	case "orphan":
-		n, err = app.core.DeleteOrphanSubscribers()
+		n, err = app.core.DeleteOrphanSubscribers(c.Request().Context())
 	default:
 		err = echo.NewHTTPError(http.StatusBadRequest, app.i18n.T("globals.messages.invalidData"))
 	}

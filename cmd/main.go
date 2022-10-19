@@ -84,6 +84,8 @@ var (
 )
 
 func init() {
+	x, err := os.Getwd()
+	fmt.Println("HIIIIIIIII", x, err)
 	initFlags()
 
 	// Display version.
